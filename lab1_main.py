@@ -2,11 +2,19 @@ import random
 
 class Generator():
 
-    def __init__(self, length):
+    def __init__(self, length=None):
         self.length = length
         self.m = 2**32
         self.a = 2**16 + 1
         self.c = 119     
+
+
+    def left_shift(self, bits, n):
+        return ((bits << n) | (bits >> (32 - n))) & (self.m - 1)
+    
+
+    def right_shift(self, bits, n):
+        return ((bits >> n) | (bits << (32 - n))) & (self.m - 1)    
 
     
     '''Built-in pseudo-random number generator: Python Random Module'''
@@ -99,9 +107,46 @@ class Generator():
             l10.append(s_i)
 
         return ''.join([str(z) for z in res_z])
+    
+    '''Librarian generator'''
+    def librarian_generator(self, plaintext):
+        with open(plaintext, 'rb') as text_bytes:
+            bytes_string = text_bytes.read()
+        return bytes_string
+    
+
+    '''Wolfram generator'''
+    def wolfram_generator(self):
+        r_i = random.randint(1, self.m - 1)
+        res = []
+        for i in range(self.length):
+            x_i = r_i % 2
+            r_i = (self.left_shift(r_i, 1)) ^ (r_i | (self.right_shift(r_i, 1)))
+            res.append(x_i)
+        return ''.join([str(x) for x in res])
+    
+
+
+
+    
+wolfram_generator = Generator(100).wolfram_generator()
+print(wolfram_generator)
+    
+
+    
+
+
+        
+    
+
+
+
+
+# librarion = Generator().librarian_generator('orwell.txt')
+# print(librarion)
         
                     
-# python_random_module = Generator(10).python_random_generator()
+# python_random_module = Generator(100).python_random_generator()
 # print(python_random_module)
 
 # lehmer_low = Generator(10).lehmer_low_generator()
@@ -116,5 +161,7 @@ class Generator():
 # generator_l89 = Generator(2300).l89_generator()
 # print(generator_l89)
 
-geffe_generator = Generator(1000000).geffe_generator()
-print(geffe_generator)
+# geffe_generator = Generator(1000000).geffe_generator()
+# print(geffe_generator)
+
+
