@@ -6,7 +6,9 @@ class Generator():
         self.length = length
         self.m = 2**32
         self.a = 2**16 + 1
-        self.c = 119     
+        self.c = 119
+        self.BM_p = 0xcea42b987c44fa642d80ad9f51f10457690def10c83d0bc1bcee12fc3b6093e3
+        self.BM_a = 0x5b88c41246790891c095e2878880342e88c79974303bd0400b090fe38a688356
 
 
     def left_shift(self, bits, n):
@@ -85,7 +87,7 @@ class Generator():
         return ''.join([str(n) for n in res])
     
 
-    '''Geffe generator'''
+    '''Geffe Generator'''
     def geffe_generator(self):
         while True:
             l11 = [random.randint(0, 1) for i in range(11)]
@@ -108,14 +110,14 @@ class Generator():
 
         return ''.join([str(z) for z in res_z])
     
-    '''Librarian generator'''
+    '''Librarian Generator'''
     def librarian_generator(self, plaintext):
         with open(plaintext, 'rb') as text_bytes:
             bytes_string = text_bytes.read()
         return bytes_string
     
 
-    '''Wolfram generator'''
+    '''Wolfram Generator'''
     def wolfram_generator(self):
         r_i = random.randint(1, self.m - 1)
         res = []
@@ -126,26 +128,33 @@ class Generator():
         return ''.join([str(x) for x in res])
     
 
+    '''BM Generator'''
+    def BM_generator(self):
+        compare = int((self.BM_p - 1) / 2)
+        t = random.randint(0, self.BM_p - 1)
+        res = []
+        for i in range(self.length):
+            if t < compare:
+                res.append(1)
+            elif t >= compare:
+                res.append(0)
+            t = pow(self.BM_a, t, self.BM_p)
+        return ''.join([str(x) for x in res])
+            
+
+    '''BM bytes Generator'''
+    def BM_bytes_generator(self):
+        t = random.randint(0, self.BM_p - 1)
+        res = []
+        for i in range(self.length):
+            k = int((256 * t) / (self.BM_p - 1))
+            t = pow(self.BM_a, t, self.BM_p)
+            res.append(k)
+        return bytes(res)
 
 
-    
-wolfram_generator = Generator(100).wolfram_generator()
-print(wolfram_generator)
-    
-
-    
 
 
-        
-    
-
-
-
-
-# librarion = Generator().librarian_generator('orwell.txt')
-# print(librarion)
-        
-                    
 # python_random_module = Generator(100).python_random_generator()
 # print(python_random_module)
 
@@ -164,4 +173,14 @@ print(wolfram_generator)
 # geffe_generator = Generator(1000000).geffe_generator()
 # print(geffe_generator)
 
+# librarion = Generator().librarian_generator('orwell.txt')
+# print(librarion)
 
+# wolfram_generator = Generator(100).wolfram_generator()
+# print(wolfram_generator)
+
+BM = Generator(100).BM_generator()
+print(BM)
+
+BM_bytes = Generator(100).BM_bytes_generator()
+print(BM_bytes)
