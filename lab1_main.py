@@ -9,6 +9,8 @@ class Generator():
         self.c = 119
         self.BM_p = 0xcea42b987c44fa642d80ad9f51f10457690def10c83d0bc1bcee12fc3b6093e3
         self.BM_a = 0x5b88c41246790891c095e2878880342e88c79974303bd0400b090fe38a688356
+        self.BBS_p = 0xd5bbb96d30086ec484eba3d7f9caeb07
+        self.BBS_q = 0x425d2b9bfdb25b9cf6c416cc6e37b59c1f
 
 
     def left_shift(self, bits, n):
@@ -153,6 +155,26 @@ class Generator():
         return bytes(res)
 
 
+    '''BBS Generator'''
+    def BBS_generator(self):
+        n = self.BBS_p * self.BBS_q
+        r = random.randint(2, n-1)
+        res = []
+        for i in range(self.length):
+            r = pow(r, 2, n)
+            res.append(r % 2)
+        return ''.join([str(x) for x in res])
+
+
+    '''BBS bytes Generator'''
+    def BBS_bytes_generator(self):
+        n = self.BBS_p * self.BBS_q
+        r = random.randint(2, n-1)
+        res = []
+        for i in range(self.length):
+            r = pow(r, 2, n)
+            res.append(r % 256)
+        return bytes(res)
 
 
 # python_random_module = Generator(100).python_random_generator()
@@ -179,8 +201,14 @@ class Generator():
 # wolfram_generator = Generator(100).wolfram_generator()
 # print(wolfram_generator)
 
-BM = Generator(100).BM_generator()
-print(BM)
+# BM = Generator(100).BM_generator()
+# print(BM)
 
-BM_bytes = Generator(100).BM_bytes_generator()
-print(BM_bytes)
+# BM_bytes = Generator(100).BM_bytes_generator()
+# print(BM_bytes)
+
+# bbs_generator = Generator(100).BBS_generator()
+# print(bbs_generator)
+
+# bbs_bytes_generator = Generator(100).BBS_bytes_generator()
+# print(bbs_bytes_generator)
