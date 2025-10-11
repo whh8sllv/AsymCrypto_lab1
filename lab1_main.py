@@ -1,4 +1,7 @@
 import random
+from collections import Counter
+from math import sqrt
+from scipy.stats import norm
 
 class Generator():
 
@@ -19,7 +22,23 @@ class Generator():
 
     def right_shift(self, bits, n):
         return ((bits >> n) | (bits << (32 - n))) & (self.m - 1)    
+    
 
+    def get_bits_into_bytes(self, bits):
+        res = []
+        if len(bits) % 8 != 0:
+            r = len(bits) % 8
+            dif = 8 - r
+            bits += [0] * dif
+        byte = ''
+        for b in bits:
+            byte += str(b)
+            if len(byte) == 8:
+                res.append(byte)
+                byte = ''
+        res_bin = [int(b, 2) for b in res]
+        return bytes(res_bin)
+        
     
     '''Built-in pseudo-random number generator: Python Random Module'''
     def python_random_generator(self):
@@ -71,7 +90,7 @@ class Generator():
         for t in range(20, self.length):
             x_t = res[t-3] ^ res[t-5] ^ res[t-9] ^ res[t-20]
             res.append(x_t)
-        return ''.join([str(n) for n in res])
+        return self.get_bits_into_bytes(res)
     
 
     '''L89 Generator'''
@@ -86,7 +105,7 @@ class Generator():
         for t in range(89, self.length):
             x_t = res[t-38] ^ res[t-89]
             res.append(x_t)
-        return ''.join([str(n) for n in res])
+        return self.get_bits_into_bytes(res)
     
 
     '''Geffe Generator'''
@@ -110,7 +129,7 @@ class Generator():
             l9.append(y_i)
             l10.append(s_i)
 
-        return ''.join([str(z) for z in res_z])
+        return self.get_bits_into_bytes(res_z)
     
     '''Librarian Generator'''
     def librarian_generator(self, plaintext):
@@ -127,7 +146,7 @@ class Generator():
             x_i = r_i % 2
             r_i = (self.left_shift(r_i, 1)) ^ (r_i | (self.right_shift(r_i, 1)))
             res.append(x_i)
-        return ''.join([str(x) for x in res])
+        return self.get_bits_into_bytes(res)
     
 
     '''BM Generator'''
@@ -141,7 +160,7 @@ class Generator():
             elif t >= compare:
                 res.append(0)
             t = pow(self.BM_a, t, self.BM_p)
-        return ''.join([str(x) for x in res])
+        return self.get_bits_into_bytes(res)
             
 
     '''BM bytes Generator'''
@@ -163,7 +182,7 @@ class Generator():
         for i in range(self.length):
             r = pow(r, 2, n)
             res.append(r % 2)
-        return ''.join([str(x) for x in res])
+        return self.get_bits_into_bytes(res)
 
 
     '''BBS bytes Generator'''
@@ -175,15 +194,55 @@ class Generator():
             r = pow(r, 2, n)
             res.append(r % 256)
         return bytes(res)
+    
+class ProbabilityQualityTest():
+
+    def __init__(self, alpha, generator_bytes):
+        self.alpha = alpha
+        self.test_data = generator_bytes
+        self.n = len(self.test_data) / 256
+
+    def calculate_chi_square(self):
+        chi_square = 0
+        v = Counter(self.test_data)
+        for j in range(256):
+            chi_square += (((v[j] - self.n)**2) / self.n)
+        return chi_square
+    
+    def calculate_limit_chi_square(self):
+        l = 255
+        z = norm.ppf(1 - self.alpha)
+        return ((sqrt(2*l) * z) + l)
+    
+    def compare_data(self):
+        print(f'Гіпотеза H_0: всі байти послідовності рівноімовірні')
+        chi_square = self.calculate_chi_square()
+        limit_chi_square = self.calculate_limit_chi_square()
+        print(f'Статистика хі-квадрат = {chi_square}')
+        print(f'Граничне значення хі-квадрат = {limit_chi_square} (l=255, alpha = {self.alpha})')
+        if chi_square <= limit_chi_square:
+            print(f'значення хі-квадрат не перевищує граничне значення хі-квадрат при alpha = {self.alpha}, тому гіпотеза H_0 не суперечить експериментальним даним і приймається')
+            print('==> всі байти послідовності рівноімовірні')
+        else:
+            print(f'значення хі-квадрат перевищує граничне значення хі-квадрат при alpha = {self.alpha}, тому гіпотеза H_0 відкидається')
+        
 
 
-# python_random_module = Generator(100).python_random_generator()
+# python_random_module = Generator(125000).python_random_generator()
 # print(python_random_module)
+# print()
 
-# lehmer_low = Generator(10).lehmer_low_generator()
+# probability_random_module_test = ProbabilityQualityTest(0.01, python_random_module).compare_data()
+
+
+
+
+# lehmer_low = Generator(125000).lehmer_low_generator()
 # print(lehmer_low)
 
-# lehmer_high = Generator(10).lehmer_high_generator()
+# probability_lehmer_low_module_test = ProbabilityQualityTest(0.01, lehmer_low).compare_data()
+
+# lehmer_high = Generator(100).lehmer_high_generator()
 # print(lehmer_high)
 
 # generator_l20 = Generator(2300).l20_generator()
@@ -192,13 +251,17 @@ class Generator():
 # generator_l89 = Generator(2300).l89_generator()
 # print(generator_l89)
 
-# geffe_generator = Generator(1000000).geffe_generator()
-# print(geffe_generator)
+geffe_generator = Generator(125000).geffe_generator()
+print(geffe_generator)
+print(f'кількість байтів = {len(geffe_generator)}')
+
+probability_geffe = ProbabilityQualityTest(0.01, geffe_generator).compare_data()
+
 
 # librarion = Generator().librarian_generator('orwell.txt')
 # print(librarion)
 
-# wolfram_generator = Generator(100).wolfram_generator()
+# wolfram_generator = Generator(10000).wolfram_generator()
 # print(wolfram_generator)
 
 # BM = Generator(100).BM_generator()
@@ -207,7 +270,7 @@ class Generator():
 # BM_bytes = Generator(100).BM_bytes_generator()
 # print(BM_bytes)
 
-# bbs_generator = Generator(100).BBS_generator()
+# bbs_generator = Generator(1000).BBS_generator()
 # print(bbs_generator)
 
 # bbs_bytes_generator = Generator(100).BBS_bytes_generator()
