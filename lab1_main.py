@@ -225,15 +225,70 @@ class ProbabilityQualityTest():
             print('==> всі байти послідовності рівноімовірні')
         else:
             print(f'значення хі-квадрат перевищує граничне значення хі-квадрат при alpha = {self.alpha}, тому гіпотеза H_0 відкидається')
+
+
+
+class IndependenceQualityTest():
+
+    def __init__(self, alpha, generator_bytes):
+        self.alpha = alpha
+        self.test_data = generator_bytes
+        self.n = len(self.test_data) // 2
+
+    def get_pairs(self):
+        pairs = []
+        for i in range(1, self.n):
+            pairs.append((self.test_data[2*i - 1], self.test_data[2*i]))
+        return pairs
+    
+    def calculate_chi_square(self):
+        chi_square = 0
+        pairs = self.get_pairs()
+        v_ij = Counter(pairs)
+        bytes_i = [el[0] for el in pairs]
+        bytes_j = [el[1] for el in pairs]
+        v_i = Counter(bytes_i)
+        al_j = Counter(bytes_j)
+        for i in range(256):
+            for j in range(256):
+                v_pair = v_ij[(i, j)]
+                v = v_i[i]
+                al = al_j[j]
+                if v_pair == 0 or v == 0 or al == 0:
+                    continue
+                chi_square += (v_pair**2 / (v*al))
+        chi_square *= self.n
+        chi_square -= self.n
+        return chi_square
+    
+    def calculate_limit_chi_square(self):
+        l = 255**2
+        z = norm.ppf(1 - self.alpha)
+        return ((sqrt(2*l) * z) + l)
+    
+    def compare_data(self):
+        print(f'Гіпотеза H_0: байти послідовності незалежні від попереднього значення')
+        chi_square = self.calculate_chi_square()
+        limit_chi_square = self.calculate_limit_chi_square()
+        print(f'Статистика хі-квадрат = {chi_square}')
+        print(f'Граничне значення хі-квадрат = {limit_chi_square} (l=255^2, alpha = {self.alpha})')
+        if chi_square <= limit_chi_square:
+            print(f'значення хі-квадрат не перевищує граничне значення хі-квадрат при alpha = {self.alpha}, тому гіпотеза H_0 не суперечить експериментальним даним і приймається')
+            print('==> байти послідовності незалежні від попереднього значення')
+        else:
+            print(f'значення хі-квадрат перевищує граничне значення хі-квадрат при alpha = {self.alpha}, тому гіпотеза H_0 відкидається')
+
+
+
+    
+    
         
 
 
-# python_random_module = Generator(125000).python_random_generator()
-# print(python_random_module)
-# print()
-
-# probability_random_module_test = ProbabilityQualityTest(0.01, python_random_module).compare_data()
-
+python_random_module = Generator(125000).python_random_generator()
+probability_random_module_test = ProbabilityQualityTest(0.01, python_random_module).compare_data()
+print()
+ind_random_module_test = IndependenceQualityTest(0.01, python_random_module).compare_data()
 
 
 
@@ -251,12 +306,15 @@ class ProbabilityQualityTest():
 # generator_l89 = Generator(2300).l89_generator()
 # print(generator_l89)
 
-geffe_generator = Generator(125000).geffe_generator()
-print(geffe_generator)
-print(f'кількість байтів = {len(geffe_generator)}')
+# geffe_generator = Generator(1000000).geffe_generator()
+# print(geffe_generator)
+# print(f'кількість байтів = {len(geffe_generator)}')
 
-probability_geffe = ProbabilityQualityTest(0.01, geffe_generator).compare_data()
-
+# probability_geffe = ProbabilityQualityTest(0.01, geffe_generator).compare_data()
+# ind_geffe = IndependenceQualityTest(0.01, geffe_generator).calculate_chi_square()
+# print(ind_geffe)
+# ind_geffe2 = IndependenceQualityTest(0.01, geffe_generator).calculate_limit_chi_square()
+# print(ind_geffe2)
 
 # librarion = Generator().librarian_generator('orwell.txt')
 # print(librarion)
