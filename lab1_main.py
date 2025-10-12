@@ -221,10 +221,10 @@ class ProbabilityQualityTest():
         print(f'Статистика хі-квадрат = {chi_square}')
         print(f'Граничне значення хі-квадрат = {limit_chi_square} (l=255, alpha = {self.alpha})')
         if chi_square <= limit_chi_square:
-            print(f'значення хі-квадрат не перевищує граничне значення хі-квадрат при alpha = {self.alpha}, тому гіпотеза H_0 не суперечить експериментальним даним і приймається')
+            print(f'Значення хі-квадрат не перевищує граничне значення хі-квадрат при alpha = {self.alpha}, тому гіпотеза H_0 не суперечить експериментальним даним і приймається')
             print('==> всі байти послідовності рівноімовірні')
         else:
-            print(f'значення хі-квадрат перевищує граничне значення хі-квадрат при alpha = {self.alpha}, тому гіпотеза H_0 відкидається')
+            print(f'Значення хі-квадрат перевищує граничне значення хі-квадрат при alpha = {self.alpha}, тому гіпотеза H_0 відкидається')
 
 
 
@@ -273,63 +273,245 @@ class IndependenceQualityTest():
         print(f'Статистика хі-квадрат = {chi_square}')
         print(f'Граничне значення хі-квадрат = {limit_chi_square} (l=255^2, alpha = {self.alpha})')
         if chi_square <= limit_chi_square:
-            print(f'значення хі-квадрат не перевищує граничне значення хі-квадрат при alpha = {self.alpha}, тому гіпотеза H_0 не суперечить експериментальним даним і приймається')
+            print(f'Значення хі-квадрат не перевищує граничне значення хі-квадрат при alpha = {self.alpha}, тому гіпотеза H_0 не суперечить експериментальним даним і приймається')
             print('==> байти послідовності незалежні від попереднього значення')
         else:
-            print(f'значення хі-квадрат перевищує граничне значення хі-квадрат при alpha = {self.alpha}, тому гіпотеза H_0 відкидається')
+            print(f'Значення хі-квадрат перевищує граничне значення хі-квадрат при alpha = {self.alpha}, тому гіпотеза H_0 відкидається')
 
 
+class UniformityQualityTest():
 
+    def __init__(self, alpha, generator_bytes):
+        self.alpha = alpha
+        self.test_data = generator_bytes
+        self.n = len(self.test_data)
+        self.r = 200
+        self.m_i = self.n // self.r
+
+    def get_sequences(self):
+        seq = []
+        for i in range(0, len(self.test_data), self.m_i):
+            fragment = self.test_data[i:i+self.m_i]
+            seq.append(fragment)
+        return seq
     
-    
+    def calculate_chi_square(self):
+        sequences = self.get_sequences()
+        chi_square = 0
+        v = Counter(self.test_data)
+        for i in range(256):
+            for j in sequences:
+                v_ij = Counter(j)[i]
+                v_i = v[i]
+                if v_ij == 0 or v_i == 0:
+                    continue
+                chi_square += (v_ij**2 / (v_i * self.m_i))
+        chi_square *= self.n
+        chi_square -= self.n
+        return chi_square
         
+    def calculate_limit_chi_square(self):
+        l = 255 * (self.r - 1)
+        z = norm.ppf(1 - self.alpha)
+        return ((sqrt(2*l) * z) + l)
+    
+    def compare_data(self):
+        print(f'Гіпотеза H_0: послідовності байтів обираються з одного і того ж самого розподілу, послідовність є однорідною')
+        chi_square = self.calculate_chi_square()
+        limit_chi_square = self.calculate_limit_chi_square()
+        print(f'Статистика хі-квадрат = {chi_square}')
+        print(f'Граничне значення хі-квадрат = {limit_chi_square} (l=255*(r-1), alpha = {self.alpha}, r = {self.r})')
+        if chi_square <= limit_chi_square:
+            print(f'Значення хі-квадрат не перевищує граничне значення хі-квадрат при alpha = {self.alpha}, тому гіпотеза H_0 не суперечить експериментальним даним і приймається')
+            print('==> послідовність є однорідною, байти обираються з одного розподілу')
+        else:
+            print(f'Значення хі-квадрат перевищує граничне значення хі-квадрат при alpha = {self.alpha}, тому гіпотеза H_0 відкидається')
 
 
-python_random_module = Generator(125000).python_random_generator()
-probability_random_module_test = ProbabilityQualityTest(0.01, python_random_module).compare_data()
-print()
-ind_random_module_test = IndependenceQualityTest(0.01, python_random_module).compare_data()
+def display():
+    print('Оберіть, який генератор Ви хочете перевірити: ')
+    print('1 - вбудований генератор мови програмування Python')
+    print('2 - генератор LehmerLow')
+    print('3 - генератор LehmerHigh')
+    print('4 - генератор L20')
+    print('5 - генератор L89')
+    print('6 - генератор Джиффі (Geffe)')
+    print('7 - генератор "Бібліотекар"')
+    print('8 - генератор Вольфрама')
+    print('9 - генератор Блюма-Мікалі ВМ')
+    print('10 - ВМ_bytes (байтова модифікація генератору Блюма-Мікалі)')
+    print('11 - генератор BBS')
+    print('12 - генератор BBS_bytes (байтова модифікація генератору BBS)')
+    n = int(input('Номер вашого піддослідного = '))
+    if n == 1:
+        print('Отже, перевіримо вбудований генератор мови програмування Python')
+        byte_length = int(input('Зазначте довжину послідовності для генерування в байтах: '))
+        alpha_level = float(input('Оберіть значення параметру alpha для перевірки гіпотез (0.01 / 0.05 / 0.1): '))
+        print('Ваша послідовність генерується...')
+        python_random_module = Generator(byte_length).python_random_generator()
+        print('...')
+        print('Послідовність згенеровано. Перевіримо її якість')
+        print('***')
+        ProbabilityQualityTest(alpha_level, python_random_module).compare_data()
+        print('***')
+        IndependenceQualityTest(alpha_level, python_random_module).compare_data()
+        print('***')
+        UniformityQualityTest(alpha_level, python_random_module).compare_data()
+    elif n == 2:
+        print('Отже, перевіримо генератор LehmerLow')
+        byte_length = int(input('Зазначте довжину послідовності для генерування в байтах: '))
+        alpha_level = float(input('Оберіть значення параметру alpha для перевірки гіпотез (0.01 / 0.05 / 0.1): '))
+        print('Ваша послідовність генерується...')
+        lehmer_low = Generator(byte_length).lehmer_low_generator()
+        print('...')
+        print('Послідовність згенеровано. Перевіримо її якість')
+        print('***')
+        ProbabilityQualityTest(alpha_level, lehmer_low).compare_data()
+        print('***')
+        IndependenceQualityTest(alpha_level, lehmer_low).compare_data()
+        print('***')
+        UniformityQualityTest(alpha_level, lehmer_low).compare_data()
+    elif n == 3:
+        print('Отже, перевіримо генератор LehmerHigh')
+        byte_length = int(input('Зазначте довжину послідовності для генерування в байтах: '))
+        alpha_level = float(input('Оберіть значення параметру alpha для перевірки гіпотез (0.01 / 0.05 / 0.1): '))
+        print('Ваша послідовність генерується...')
+        lehmer_high = Generator(byte_length).lehmer_high_generator()
+        print('...')
+        print('Послідовність згенеровано. Перевіримо її якість')
+        print('***')
+        ProbabilityQualityTest(alpha_level, lehmer_high).compare_data()
+        print('***')
+        IndependenceQualityTest(alpha_level, lehmer_high).compare_data()
+        print('***')
+        UniformityQualityTest(alpha_level, lehmer_high).compare_data()
+    elif n == 4:
+        print('Отже, перевіримо генератор L20')
+        byte_length = int(input('Зазначте довжину послідовності для генерування в бітах: '))
+        alpha_level = float(input('Оберіть значення параметру alpha для перевірки гіпотез (0.01 / 0.05 / 0.1): '))
+        print('Ваша послідовність генерується...')
+        l20 = Generator(byte_length).l20_generator()
+        print('...')
+        print('Послідовність згенеровано. Перевіримо її якість')
+        print('***')
+        ProbabilityQualityTest(alpha_level, l20).compare_data()
+        print('***')
+        IndependenceQualityTest(alpha_level, l20).compare_data()
+        print('***')
+        UniformityQualityTest(alpha_level, l20).compare_data()
+    elif n == 5:
+        print('Отже, перевіримо генератор L89')
+        byte_length = int(input('Зазначте довжину послідовності для генерування в бітах: '))
+        alpha_level = float(input('Оберіть значення параметру alpha для перевірки гіпотез (0.01 / 0.05 / 0.1): '))
+        print('Ваша послідовність генерується...')
+        l89 = Generator(byte_length).l89_generator()
+        print('...')
+        print('Послідовність згенеровано. Перевіримо її якість')
+        print('***')
+        ProbabilityQualityTest(alpha_level, l89).compare_data()
+        print('***')
+        IndependenceQualityTest(alpha_level, l89).compare_data()
+        print('***')
+        UniformityQualityTest(alpha_level, l89).compare_data()
+    elif n == 6:
+        print('Отже, перевіримо генератор Джиффі (Geffe)')
+        byte_length = int(input('Зазначте довжину послідовності для генерування в бітах: '))
+        alpha_level = float(input('Оберіть значення параметру alpha для перевірки гіпотез (0.01 / 0.05 / 0.1): '))
+        print('Ваша послідовність генерується...')
+        geffe = Generator(byte_length).geffe_generator()
+        print('...')
+        print('Послідовність згенеровано. Перевіримо її якість')
+        print('***')
+        ProbabilityQualityTest(alpha_level, geffe).compare_data()
+        print('***')
+        IndependenceQualityTest(alpha_level, geffe).compare_data()
+        print('***')
+        UniformityQualityTest(alpha_level, geffe).compare_data()
+    elif n == 7:
+        print('Отже, перевіримо генератор "Бібліотекар"')
+        filename = input("Зазначте назву вхідного файлу, з якого буде генеруватись послідовність байтів (формат 'назва.txt'): ")
+        alpha_level = float(input('Оберіть значення параметру alpha для перевірки гіпотез (0.01 / 0.05 / 0.1): '))
+        print('Ваша послідовність генерується...')
+        print('...')
+        librarion = Generator().librarian_generator(filename)
+        print(f'Послідовність згенеровано. Довжина послідовності дорівнює {len(librarion)} байтів')
+        print('Перевіримо її якість')
+        print('***')
+        ProbabilityQualityTest(alpha_level, librarion).compare_data()
+        print('***')
+        IndependenceQualityTest(alpha_level, librarion).compare_data()
+        print('***')
+        UniformityQualityTest(alpha_level, librarion).compare_data()
+    elif n == 8:
+        print('Отже, перевіримо генератор Вольфрама')
+        byte_length = int(input('Зазначте довжину послідовності для генерування в бітах: '))
+        alpha_level = float(input('Оберіть значення параметру alpha для перевірки гіпотез (0.01 / 0.05 / 0.1): '))
+        print('Ваша послідовність генерується...')
+        wolfram = Generator(byte_length).wolfram_generator()
+        print('...')
+        print('Послідовність згенеровано. Перевіримо її якість')
+        print('***')
+        ProbabilityQualityTest(alpha_level, wolfram).compare_data()
+        print('***')
+        IndependenceQualityTest(alpha_level, wolfram).compare_data()
+        print('***')
+        UniformityQualityTest(alpha_level, wolfram).compare_data()
+    elif n == 9:
+        print('Отже, перевіримо генератор Блюма-Мікалі BM')
+        byte_length = int(input('Зазначте довжину послідовності для генерування в бітах: '))
+        alpha_level = float(input('Оберіть значення параметру alpha для перевірки гіпотез (0.01 / 0.05 / 0.1): '))
+        print('Ваша послідовність генерується...')
+        BM = Generator(byte_length).BM_generator()
+        print('...')
+        print('Послідовність згенеровано. Перевіримо її якість')
+        print('***')
+        ProbabilityQualityTest(alpha_level, BM).compare_data()
+        print('***')
+        IndependenceQualityTest(alpha_level, BM).compare_data()
+        print('***')
+        UniformityQualityTest(alpha_level, BM).compare_data()
+    elif n == 10:
+        print('Отже, перевіримо генератор BM_bytes (байтова модифікація генератору Блюма-Мікалі)')
+        byte_length = int(input('Зазначте довжину послідовності для генерування в байтах: '))
+        alpha_level = float(input('Оберіть значення параметру alpha для перевірки гіпотез (0.01 / 0.05 / 0.1): '))
+        print('Ваша послідовність генерується...')
+        BM_bytes = Generator(byte_length).BM_bytes_generator()
+        print('...')
+        print('Послідовність згенеровано. Перевіримо її якість')
+        print('***')
+        ProbabilityQualityTest(alpha_level, BM_bytes).compare_data()
+        print('***')
+        IndependenceQualityTest(alpha_level, BM_bytes).compare_data()
+        print('***')
+        UniformityQualityTest(alpha_level, BM_bytes).compare_data()
+    elif n == 11:
+        print('Отже, перевіримо генератор BBS')
+        byte_length = int(input('Зазначте довжину послідовності для генерування в бітах: '))
+        alpha_level = float(input('Оберіть значення параметру alpha для перевірки гіпотез (0.01 / 0.05 / 0.1): '))
+        print('Ваша послідовність генерується...')
+        BBS = Generator(byte_length).BBS_generator()
+        print('...')
+        print('Послідовність згенеровано. Перевіримо її якість')
+        print('***')
+        ProbabilityQualityTest(alpha_level, BBS).compare_data()
+        print('***')
+        IndependenceQualityTest(alpha_level, BBS).compare_data()
+        print('***')
+        UniformityQualityTest(alpha_level, BBS).compare_data()
+    elif n == 12:
+        print('Отже, перевіримо генератор BBS_bytes (байтова модифікація генератору BBS)')
+        byte_length = int(input('Зазначте довжину послідовності для генерування в байтах: '))
+        alpha_level = float(input('Оберіть значення параметру alpha для перевірки гіпотез (0.01 / 0.05 / 0.1): '))
+        print('Ваша послідовність генерується...')
+        BBS_bytes = Generator(byte_length).BBS_bytes_generator()
+        print('...')
+        print('Послідовність згенеровано. Перевіримо її якість')
+        print('***')
+        ProbabilityQualityTest(alpha_level, BBS_bytes).compare_data()
+        print('***')
+        IndependenceQualityTest(alpha_level, BBS_bytes).compare_data()
+        print('***')
+        UniformityQualityTest(alpha_level, BBS_bytes).compare_data()
+    
 
-
-
-# lehmer_low = Generator(125000).lehmer_low_generator()
-# print(lehmer_low)
-
-# probability_lehmer_low_module_test = ProbabilityQualityTest(0.01, lehmer_low).compare_data()
-
-# lehmer_high = Generator(100).lehmer_high_generator()
-# print(lehmer_high)
-
-# generator_l20 = Generator(2300).l20_generator()
-# print(generator_l20)
-
-# generator_l89 = Generator(2300).l89_generator()
-# print(generator_l89)
-
-# geffe_generator = Generator(1000000).geffe_generator()
-# print(geffe_generator)
-# print(f'кількість байтів = {len(geffe_generator)}')
-
-# probability_geffe = ProbabilityQualityTest(0.01, geffe_generator).compare_data()
-# ind_geffe = IndependenceQualityTest(0.01, geffe_generator).calculate_chi_square()
-# print(ind_geffe)
-# ind_geffe2 = IndependenceQualityTest(0.01, geffe_generator).calculate_limit_chi_square()
-# print(ind_geffe2)
-
-# librarion = Generator().librarian_generator('orwell.txt')
-# print(librarion)
-
-# wolfram_generator = Generator(10000).wolfram_generator()
-# print(wolfram_generator)
-
-# BM = Generator(100).BM_generator()
-# print(BM)
-
-# BM_bytes = Generator(100).BM_bytes_generator()
-# print(BM_bytes)
-
-# bbs_generator = Generator(1000).BBS_generator()
-# print(bbs_generator)
-
-# bbs_bytes_generator = Generator(100).BBS_bytes_generator()
-# print(bbs_bytes_generator)
+display()
